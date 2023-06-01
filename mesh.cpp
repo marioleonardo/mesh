@@ -1,9 +1,15 @@
+// Online C++ compiler to run C++ program online
 #include <iostream>
 #include <vector>
 
+struct Point{
+    float x;
+    float y;
+};
+
 struct Triangle {
     int id;
-    int a, b, c;
+    Point a, b, c;
     int ab, bc, ca;
 };
 
@@ -17,9 +23,9 @@ int orientation(const Point& p1, const Point& p2, const Point& p3) {
 // Funzione per controllare se un punto è all'interno di un triangolo
 bool isInsideTriangle(const Point& p, const Triangle& t) {
     Point p1, p2, p3;
-    p1 = getPointById(t.a);
-    p2 = getPointById(t.b);
-    p3 = getPointById(t.c);
+    p1 = t.a;
+    p2 = t.b;
+    p3 = t.c;
 
     int d1, d2, d3;
     d1 = orientation(p, p1, p2);
@@ -39,7 +45,7 @@ void performFlipping(std::vector<Triangle>& mesh, int currentTriangleIndex, int 
     Triangle& nextTriangle = mesh[nextTriangleIndex];
 
     // Trova il punto condiviso sull'edge dei triangoli correnti
-    int sharedPoint1, sharedPoint2;
+    Point sharedPoint1, sharedPoint2;
     if (sharedEdgeIndex == 0) {
         sharedPoint1 = currentTriangle.a;
         sharedPoint2 = currentTriangle.b;
@@ -62,18 +68,18 @@ void performFlipping(std::vector<Triangle>& mesh, int currentTriangleIndex, int 
     }
 
     // Controlla se il flipping è necessario
-    Point sharedPoint = getPointById(sharedPoint1);
-    Point p1 = getPointById(sharedPoint2);
+    Point sharedPoint = sharedPoint1;
+    Point p1 = sharedPoint2;
     Point p2, p3;
     if (sharedEdgeIndexNextTriangle == 0) {
-        p2 = getPointById(nextTriangle.b);
-        p3 = getPointById(nextTriangle.c);
+        p2 = nextTriangle.b;
+        p3 = nextTriangle.c;
     } else if (sharedEdgeIndexNextTriangle == 1) {
-        p2 = getPointById(nextTriangle.c);
-        p3 = getPointById(nextTriangle.a);
+        p2 = nextTriangle.c;
+        p3 = nextTriangle.a;
     } else if (sharedEdgeIndexNextTriangle == 2) {
-        p2 = getPointById(nextTriangle.a);
-        p3 = getPointById(nextTriangle.b);
+        p2 = nextTriangle.a;
+        p3 = nextTriangle.b;
     }
 
     if (orientation(sharedPoint, p1, p2) < 0 && orientation(sharedPoint, p1, p3) < 0) {
@@ -106,11 +112,11 @@ void performFlipping(std::vector<Triangle>& mesh, int currentTriangleIndex, int 
 }
 
 // Funzione per creare un nuovo triangolo dato un punto interno
-void createNewTriangle(std::vector<Triangle>& mesh, int pointIndex, int triangleIndex, int sharedEdgeIndex) {
+void createNewTriangle(std::vector<Triangle>& mesh, Point point, int triangleIndex, int sharedEdgeIndex) {
     int newTriangleIndex = mesh.size();  // Indice del nuovo triangolo
     Triangle newTriangle;
     newTriangle.id = newTriangleIndex;
-    newTriangle.a = pointIndex;
+    newTriangle.a = point;
 
     Triangle& currentTriangle = mesh[triangleIndex];
     int nextTriangleIndex = currentTriangle.ab;  // Prendi il triangolo adiacente sull'edge AB
@@ -125,7 +131,7 @@ void createNewTriangle(std::vector<Triangle>& mesh, int pointIndex, int triangle
         // Crea l'adiacente per il nuovo triangolo
         Triangle newAdjacent;
         newAdjacent.id = triangleIndex;
-        newAdjacent.a = pointIndex;
+        newAdjacent.a = point;
         newAdjacent.b = currentTriangle.a;
         newAdjacent.c = currentTriangle.c;
 
@@ -144,7 +150,7 @@ void createNewTriangle(std::vector<Triangle>& mesh, int pointIndex, int triangle
         // Crea gli adiacenti per i nuovi triangoli
         Triangle newAdjacent1;
         newAdjacent1.id = triangleIndex;
-        newAdjacent1.a = pointIndex;
+        newAdjacent1.a = point;
         newAdjacent1.b = currentTriangle.a;
         newAdjacent1.c = currentTriangle.c;
 
@@ -153,7 +159,7 @@ void createNewTriangle(std::vector<Triangle>& mesh, int pointIndex, int triangle
 
         Triangle newAdjacent2;
         newAdjacent2.id = newTriangleIndex;
-        newAdjacent2.a = pointIndex;
+        newAdjacent2.a = point;
         newAdjacent2.b = nextTriangle.a;
         newAdjacent2.c = nextTriangle.c;
 
@@ -173,9 +179,9 @@ void createTriangleFromExternalPoint(std::vector<Triangle>& mesh, const Point& e
     for (int i = 0; i < n; i++) {
         Triangle& currentTriangle = mesh[i];
         Point p1, p2, p3;
-        p1 = getPointById(currentTriangle.a);
-        p2 = getPointById(currentTriangle.b);
-        p3 = getPointById(currentTriangle.c);
+        p1 = currentTriangle.a;
+        p2 = currentTriangle.b;
+        p3 = currentTriangle.c;
 
         int d1, d2, d3;
         d1 = orientation(externalPoint, p1, p2);
@@ -184,7 +190,7 @@ void createTriangleFromExternalPoint(std::vector<Triangle>& mesh, const Point& e
 
         if (d1 >= 0 && d2 >= 0 && d3 >= 0) {
             // Il punto esterno si trova all'interno di questo triangolo
-            createNewTriangle(mesh, externalPoint.id, i, -1);  // -1 indica che il punto è all'interno del triangolo
+            createNewTriangle(mesh, externalPoint, i, -1);  // -1 indica che il punto è all'interno del triangolo
             return;
         }
     }
@@ -192,39 +198,40 @@ void createTriangleFromExternalPoint(std::vector<Triangle>& mesh, const Point& e
     // Il punto esterno non si trova all'interno di nessun triangolo, quindi crea un nuovo triangolo con il punto come vertice
     Triangle newTriangle;
     newTriangle.id = n;
-    newTriangle.a = externalPoint.id;
-    newTriangle.b = (externalPoint.id + 1) % n;
-    newTriangle.c = (externalPoint.id + 2) % n;
-    newTriangle.ab = newTriangle.bc = newTriangle.ca = -1;  // Nessun adiacente
+    newTriangle.a = externalPoint;
+    //newTriangle.b = (externalPoint + 1) % n;
+    //newTriangle.c = (externalPoint + 2) % n;
+    //newTriangle.ab = newTriangle.bc = newTriangle.ca = -1;  // Nessun adiacente
 
     mesh.push_back(newTriangle);
 }
 
 int main() {
     std::vector<Triangle> mesh;
+    Point listP[1000];
 
     // Popola la mesh con i triangoli seguendo il criterio di Delaunay
 
     // Esempio di utilizzo delle funzioni:
 
     // Flipping
-    performFlipping(mesh, 0, 0);  // Esegui il flipping sul primo triangolo, sull'edge AB (0)
+    performFlipping(mesh, 0, 0);  // Esegui il flipping sul primo triangolo, 
 
     // Creazione di un nuovo triangolo con un punto interno
     Point internalPoint;
-    internalPoint.id = mesh.size();  // Assegna un nuovo ID al punto
+    //internalPoint.id = mesh.size();  // Assegna un nuovo ID al punto
     internalPoint.x = 1.0;
     internalPoint.y = 1.0;
-    mesh.push_back(internalPoint);
 
-    createNewTriangle(mesh, internalPoint.id, 0, 0);  // Crea un nuovo triangolo con il punto interno, sull'edge AB (0)
+
+    createNewTriangle(mesh, internalPoint, 0, 0);  // Crea un nuovo 
 
     // Creazione di un nuovo triangolo con un punto esterno
     Point externalPoint;
-    externalPoint.id = mesh.size();  // Assegna un nuovo ID al punto
+   
     externalPoint.x = 3.0;
     externalPoint.y = 2.0;
-    mesh.push_back(externalPoint);
+    
 
     createTriangleFromExternalPoint(mesh, externalPoint);  // Crea un nuovo triangolo con il punto esterno
 
